@@ -64,7 +64,7 @@ private:
 	px4_dev_t() {}
 };
 
-#define PX4_MAX_DEV 100
+#define PX4_MAX_DEV 500
 static px4_dev_t *devmap[PX4_MAX_DEV];
 
 /*
@@ -324,6 +324,7 @@ VDev::ioctl(file_t *filep, int cmd, unsigned long arg)
         case DEVIOCGDEVICEID:
                 ret = (int)_device_id.devid;
 		PX4_INFO("IOCTL DEVIOCGDEVICEID %d", ret);
+		break;
 	default:
 		break;
 	}
@@ -365,7 +366,9 @@ VDev::poll(file_t *filep, px4_pollfd_struct_t *fds, bool setup)
 
 			/* yes? post the notification */
 			if (fds->revents != 0)
-				sem_post(fds->sem);
+				px4_sem_post(fds->sem);
+		} else {
+			PX4_WARN("Store Poll Waiter error.");
 		}
 
 	} else {
@@ -400,7 +403,7 @@ VDev::poll_notify_one(px4_pollfd_struct_t *fds, pollevent_t events)
 {
 	PX4_DEBUG("VDev::poll_notify_one");
 	int value;
-	sem_getvalue(fds->sem, &value);
+	px4_sem_getvalue(fds->sem, &value);
 
 	/* update the reported event set */
 	fds->revents |= fds->events & events;
@@ -409,8 +412,9 @@ VDev::poll_notify_one(px4_pollfd_struct_t *fds, pollevent_t events)
 
 	/* if the state is now interesting, wake the waiter if it's still asleep */
 	/* XXX semcount check here is a vile hack; counting semphores should not be abused as cvars */
-	if ((fds->revents != 0) && (value <= 0))
-		sem_post(fds->sem);
+	if ((fds->revents != 0) && (value <= 0)) {
+		px4_sem_post(fds->sem);
+	}
 }
 
 pollevent_t
@@ -476,10 +480,10 @@ VDev *VDev::getDev(const char *path)
 void VDev::showDevices()
 {
 	int i=0;
-	PX4_INFO("Devices:\n");
+	PX4_INFO("Devices:");
 	for (; i<PX4_MAX_DEV; ++i) {
 		if (devmap[i] && strncmp(devmap[i]->name, "/dev/", 5) == 0) {
-			PX4_INFO("   %s\n", devmap[i]->name);
+			PX4_INFO("   %s", devmap[i]->name);
 		}
 	}
 }
@@ -487,10 +491,10 @@ void VDev::showDevices()
 void VDev::showTopics()
 {
 	int i=0;
-	PX4_INFO("Devices:\n");
+	PX4_INFO("Devices:");
 	for (; i<PX4_MAX_DEV; ++i) {
 		if (devmap[i] && strncmp(devmap[i]->name, "/obj/", 5) == 0) {
-			PX4_INFO("   %s\n", devmap[i]->name);
+			PX4_INFO("   %s", devmap[i]->name);
 		}
 	}
 }
@@ -498,11 +502,11 @@ void VDev::showTopics()
 void VDev::showFiles()
 {
 	int i=0;
-	PX4_INFO("Files:\n");
+	PX4_INFO("Files:");
 	for (; i<PX4_MAX_DEV; ++i) {
 		if (devmap[i] && strncmp(devmap[i]->name, "/obj/", 5) != 0 &&
 				 strncmp(devmap[i]->name, "/dev/", 5) != 0) {
-			PX4_INFO("   %s\n", devmap[i]->name);
+			PX4_INFO("   %s", devmap[i]->name);
 		}
 	}
 }
@@ -524,4 +528,3 @@ const char *VDev::devList(unsigned int *next)
 }
 
 } // namespace device
-

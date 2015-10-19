@@ -38,7 +38,6 @@
  */
 
 #include <px4_config.h>
-#include <px4_posix.h>
 #include <drivers/device/device.h>
 #include <drivers/drv_led.h>
 #include <stdio.h>
@@ -89,7 +88,7 @@ LED::~LED()
 int
 LED::init()
 {
-	debug("LED::init");
+	DEVICE_DEBUG("LED::init");
 #ifdef __PX4_NUTTX
 	CDev::init();
 #else

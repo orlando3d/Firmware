@@ -69,7 +69,7 @@ static const int ERROR = -1;
 
 Geofence::Geofence() :
 	SuperBlock(NULL, "GF"),
-	_fence_pub(-1),
+	_fence_pub(nullptr),
 	_home_pos{},
 	_home_pos_set(false),
 	_last_horizontal_range_warning(0),
@@ -259,8 +259,8 @@ Geofence::valid()
 	}
 
 	// Otherwise
-	if ((_verticesCount < 4) || (_verticesCount > GEOFENCE_MAX_VERTICES)) {
-		warnx("Fence must have at least 3 sides and not more than %d", GEOFENCE_MAX_VERTICES - 1);
+	if ((_verticesCount < 4) || (_verticesCount > fence_s::GEOFENCE_MAX_VERTICES)) {
+		warnx("Fence must have at least 3 sides and not more than %d", fence_s::GEOFENCE_MAX_VERTICES - 1);
 		return false;
 	}
 
@@ -282,13 +282,13 @@ Geofence::addPoint(int argc, char *argv[])
 	}
 
 	if (argc < 3) {
-		errx(1, "Specify: -clear | sequence latitude longitude [-publish]");
+		PX4_WARN("Specify: -clear | sequence latitude longitude [-publish]");
 	}
 
 	ix = atoi(argv[0]);
 
 	if (ix >= DM_KEY_FENCE_POINTS_MAX) {
-		errx(1, "Sequence must be less than %d", DM_KEY_FENCE_POINTS_MAX);
+		PX4_WARN("Sequence must be less than %d", DM_KEY_FENCE_POINTS_MAX);
 	}
 
 	lat = strtod(argv[1], &end);
@@ -311,13 +311,13 @@ Geofence::addPoint(int argc, char *argv[])
 		return;
 	}
 
-	errx(1, "can't store fence point");
+	PX4_WARN("can't store fence point");
 }
 
 void
 Geofence::publishFence(unsigned vertices)
 {
-	if (_fence_pub == -1) {
+	if (_fence_pub == nullptr) {
 		_fence_pub = orb_advertise(ORB_ID(fence), &vertices);
 
 	} else {

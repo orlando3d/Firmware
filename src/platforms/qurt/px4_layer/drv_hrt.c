@@ -37,10 +37,12 @@
  * High-resolution timer with callouts and timekeeping.
  */
 
+#include <px4_defines.h>
 #include <px4_workqueue.h>
 #include <drivers/drv_hrt.h>
 #include <semaphore.h>
 #include <time.h>
+#include <dspal_time.h>
 #include <string.h>
 #include <stdio.h>
 
@@ -82,9 +84,7 @@ static void hrt_unlock(void)
 hrt_abstime hrt_absolute_time(void)
 {
 	struct timespec ts;
-
-	// FIXME - clock_gettime unsupported in QuRT
-	//clock_gettime(CLOCK_MONOTONIC, &ts);
+	clock_gettime(CLOCK_MONOTONIC, &ts);
 	return ts_to_abstime(&ts);
 }
 
@@ -246,7 +246,7 @@ hrt_call_reschedule()
 	hrt_abstime	now = hrt_absolute_time();
 	struct hrt_call	*next = (struct hrt_call *)sq_peek(&callout_queue);
 	hrt_abstime	deadline = now + HRT_INTERVAL_MAX;
-	uint32_t	ticks = USEC2TICK(HRT_INTERVAL_MAX*1000);
+	uint32_t	ticks = USEC2TICK(HRT_INTERVAL_MAX);
 
 	//printf("hrt_call_reschedule\n");
 	
@@ -267,11 +267,11 @@ hrt_call_reschedule()
 		if (next->deadline <= (now + HRT_INTERVAL_MIN)) {
 			//lldbg("pre-expired\n");
 			/* set a minimal deadline so that we call ASAP */
-			ticks = USEC2TICK(HRT_INTERVAL_MIN*1000);
+			ticks = USEC2TICK(HRT_INTERVAL_MIN);
 
 		} else if (next->deadline < deadline) {
 			//lldbg("due soon\n");
-			ticks = USEC2TICK((next->deadline - now)*1000);
+			ticks = USEC2TICK((next->deadline - now));
 		}
 	}
 

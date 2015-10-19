@@ -51,6 +51,9 @@
 #include <stdint.h>
 #include <semaphore.h>
 
+#define DEVICE_LOG(FMT, ...) PX4_LOG_NAMED(_name, FMT, ##__VA_ARGS__)
+#define DEVICE_DEBUG(FMT, ...) PX4_LOG_NAMED_COND(_name, _debug_enabled, FMT, ##__VA_ARGS__)
+
 /**
  * Namespace encapsulating all device framework classes, functions and data.
  */
@@ -158,6 +161,7 @@ public:
 
 protected:
 	const char	*_name;			/**< driver name */
+	char		*_lock_name;		/**< name of the semaphore */
 	bool		_debug_enabled;		/**< if true, debug messages are printed */
 	union DeviceId	_device_id;             /**< device identifier information */
 
@@ -176,36 +180,20 @@ protected:
 	 * Note that we must loop as the wait may be interrupted by a signal.
 	 */
 	void		lock() {
-		debug("lock");
-		do {} while (sem_wait(&_lock) != 0);
+		DEVICE_DEBUG("lock");
+		do {} while (px4_sem_wait(&_lock) != 0);
 	}
 
 	/**
 	 * Release the driver lock.
 	 */
 	void		unlock() {
-		debug("unlock");
-		sem_post(&_lock);
+		DEVICE_DEBUG("unlock");
+		px4_sem_post(&_lock);
 	}
 
-	/**
-	 * Log a message.
-	 *
-	 * The message is prefixed with the driver name, and followed
-	 * by a newline.
-	 */
-	void		log(const char *fmt, ...);
-
-	/**
-	 * Print a debug message.
-	 *
-	 * The message is prefixed with the driver name, and followed
-	 * by a newline.
-	 */
-	void		debug(const char *fmt, ...);
-
 private:
-	sem_t		_lock;
+	px4_sem_t		_lock;
 
 	/** disable copy construction for this and all subclasses */
 	Device(const Device &);
@@ -337,6 +325,13 @@ public:
 	static const char *devList(unsigned int *next);
 	static const char *topicList(unsigned int *next);
 
+	/**
+	 * Get the device name.
+	 *
+	 * @return the file system string of the device handle
+	 */
+	const char*	get_devname() { return _devname; }
+
 protected:
 
 	int register_driver(const char *name, void *data);
@@ -418,13 +413,6 @@ protected:
 	 * @return		  OK on success, -errno otherwise
 	 */
 	virtual int unregister_class_devname(const char *class_devname, unsigned class_instance);
-
-	/**
-	 * Get the device name.
-	 *
-	 * @return the file system string of the device handle
-	 */
-	const char*	get_devname() { return _devname; }
 
 	bool		_pub_blocked;		/**< true if publishing should be blocked */
 

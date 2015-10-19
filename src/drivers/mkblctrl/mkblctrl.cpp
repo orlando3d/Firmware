@@ -295,7 +295,7 @@ MK::init(unsigned motors)
 		ret = register_driver(_device, &fops, 0666, (void *)this);
 
 		if (ret == OK) {
-			log("creating alternate output device");
+			DEVICE_LOG("creating alternate output device");
 			_primary_pwm_device = true;
 		}
 
@@ -311,7 +311,7 @@ MK::init(unsigned motors)
 
 
 	if (_task < 0) {
-		debug("task start failed: %d", errno);
+		DEVICE_DEBUG("task start failed: %d", errno);
 		return -errno;
 	}
 
@@ -499,7 +499,7 @@ MK::task_main()
 
 	up_pwm_servo_set_rate(_update_rate);	/* unnecessary ? */
 
-	log("starting");
+	DEVICE_LOG("starting");
 
 	/* loop until killed */
 	while (!_task_should_exit) {
@@ -516,7 +516,7 @@ MK::task_main()
 
 		/* this would be bad... */
 		if (ret < 0) {
-			log("poll error %d", errno);
+			DEVICE_LOG("poll error %d", errno);
 			usleep(1000000);
 			continue;
 		}
@@ -601,11 +601,11 @@ MK::task_main()
 			esc.counter++;
 			esc.timestamp = hrt_absolute_time();
 			esc.esc_count = (uint8_t) _num_outputs;
-			esc.esc_connectiontype = ESC_CONNECTION_TYPE_I2C;
+			esc.esc_connectiontype = esc_status_s::ESC_CONNECTION_TYPE_I2C;
 
 			for (unsigned int i = 0; i < _num_outputs; i++) {
 				esc.esc[i].esc_address = (uint8_t) BLCTRL_BASE_ADDR + i;
-				esc.esc[i].esc_vendor = ESC_VENDOR_MIKROKOPTER;
+				esc.esc[i].esc_vendor = esc_status_s::ESC_VENDOR_MIKROKOPTER;
 				esc.esc[i].esc_version = (uint16_t) Motor[i].Version;
 				esc.esc[i].esc_voltage = 0.0F;
 				esc.esc[i].esc_current = static_cast<float>(Motor[i].Current) * 0.1F;
@@ -641,7 +641,6 @@ MK::task_main()
 
 	}
 
-	::close(_t_esc_status);
 	::close(_t_actuators);
 	::close(_t_actuator_armed);
 
@@ -649,7 +648,7 @@ MK::task_main()
 	/* make sure servos are off */
 	up_pwm_servo_deinit();
 
-	log("stopping");
+	DEVICE_LOG("stopping");
 
 	/* note - someone else is responsible for restoring the GPIO config */
 
@@ -1076,7 +1075,7 @@ MK::pwm_ioctl(file *filp, int cmd, unsigned long arg)
 				ret = _mixers->load_from_buf(buf, buflen);
 
 				if (ret != 0) {
-					debug("mixer load failed with %d", ret);
+					DEVICE_DEBUG("mixer load failed with %d", ret);
 					delete _mixers;
 					_mixers = nullptr;
 					ret = -EINVAL;
