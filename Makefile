@@ -89,7 +89,7 @@ endif
 # --------------------------------------------------------------------
 # describe how to build a cmake config
 define cmake-build
-+@if [ ! -e $(PWD)/build_$@/CMakeCache.txt ]; then mkdir -p $(PWD)/build_$@ && cd $(PWD)/build_$@ && cmake .. -G$(PX4_CMAKE_GENERATOR) -DCONFIG=$(1); fi
++@if [ ! -e $(PWD)/build_$@/CMakeCache.txt ]; then git submodule update --init --recursive --force && mkdir -p $(PWD)/build_$@ && cd $(PWD)/build_$@ && cmake .. -G$(PX4_CMAKE_GENERATOR) -DCONFIG=$(1); fi
 +$(PX4_MAKE) -C $(PWD)/build_$@ $(PX4_MAKE_ARGS) $(ARGS)
 endef
 
@@ -104,13 +104,13 @@ endef
 # --------------------------------------------------------------------
 #  Do not put any spaces between function arguments.
 
-px4fmu-v1_default: git-init
+px4fmu-v1_default:
 	$(call cmake-build,nuttx_px4fmu-v1_default)
 
-px4fmu-v2_default: git-init
+px4fmu-v2_default:
 	$(call cmake-build,nuttx_px4fmu-v2_default)
 
-px4fmu-v2_simple: git-init
+px4fmu-v2_simple:
 	$(call cmake-build,nuttx_px4fmu-v2_simple)
 
 nuttx_sim_simple:
@@ -130,7 +130,10 @@ posix: posix_sitl_simple
 ros: ros_sitl_simple
 
 run_sitl_quad: posix
-	Tools/sitl_run.sh posix-configs/SITL/init/rcS
+	Tools/sitl_run.sh posix-configs/SITL/init/rcS none jmavsim
+
+run_sitl_iris: posix
+	Tools/sitl_run.sh posix-configs/SITL/init/rcS_iris_gazebo
 
 run_sitl_plane: posix
 	Tools/sitl_run.sh posix-configs/SITL/init/rc.fixed_wing
@@ -139,7 +142,7 @@ run_sitl_ros: posix
 	Tools/sitl_run.sh posix-configs/SITL/init/rc_iris_ros
 
 lldb_sitl_quad: posix
-	Tools/sitl_run.sh posix-configs/SITL/init/rcS lldb
+	Tools/sitl_run.sh posix-configs/SITL/init/rcS lldb jmavsim
 
 lldb_sitl_plane: posix
 	Tools/sitl_run.sh posix-configs/SITL/init/rc.fixed_wing lldb
@@ -148,7 +151,7 @@ lldb_sitl_ros: posix
 	Tools/sitl_run.sh posix-configs/SITL/init/rc_iris_ros lldb
 
 gdb_sitl_quad: posix
-	Tools/sitl_run.sh posix-configs/SITL/init/rcS gdb
+	Tools/sitl_run.sh posix-configs/SITL/init/rcS gdb jmavsim
 
 gdb_sitl_plane: posix
 	Tools/sitl_run.sh posix-configs/SITL/init/rc.fixed_wing lldb
@@ -172,19 +175,8 @@ check_format:
 
 clean:
 	@rm -rf build_*/
-
-distclean: clean
-	@cd NuttX
-	@git clean -d -f -x
-	@cd ..
-	@cd src/modules/uavcan/libuavcan
-	@git clean -d -f -x
-	@cd ../../../..
-
-# XXX this is not the right way to fix it, but we need a temporary solution
-# for average joe
-git-init:
-	@git submodule update --init --recursive
+	@(cd NuttX && git clean -d -f -x)
+	@(cd src/modules/uavcan/libuavcan && git clean -d -f -x)
 
 # targets handled by cmake
 cmake_targets = test upload package package_source debug debug_tui debug_ddd debug_io debug_io_tui debug_io_ddd check_weak libuavcan
